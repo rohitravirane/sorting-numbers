@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <link rel="stylesheet" href="./css/style.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sorting Numbers</title>
+  </head>
+  <body>
+    <div class="main">
+      <h1>Sorting Numbers</h1>
+      <%- include("./partials/controls") %>
+      <%- include("./partials/grid") %>
+    </div>
+    <script
+      src="https://code.jquery.com/jquery-3.6.0.js"
+      integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk="
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      function main() {
+        //vars
+        var body = document.getElementsByTagName("body")[0];
+        var grid = document.getElementById("myGrid");
+
+        //dimensions
+        const rohit = getEmSize(body);
+        var EM = rohit;
+        let minFactor = Math.min(grid.clientHeight, grid.clientWidth);
+        if (minFactor < 600) {
+          $("#fontSize").val(1);
+        }
+        setFontSize($("#fontSize").val());
+        var LineHeight = EM + EM * 0.2;
+        var ROWS, COLS;
+        var intMax = $("#intMax").val();
+        const paddingFactor = 2;
+        const totalPadding = 2 * paddingFactor;
+
+        var DATA = [];
+        var defaultDelayTime = 10;
+        var delayTime = defaultDelayTime;
+        var mode = $("#mode").val().toLowerCase();
+        var gridDirty = true;
+        var loopIterations = 0;
+
+        let changeMap = {
+          routine: function (ev) {},
+          mode: function (ev) {
+            mode = ev.target.value.toLowerCase();
+            let el = $("#delayTime");
+            if (mode == "asynchronous") {
+              el.val(0).prop("disabled", "true");
+              delayTime = 0;
+            } else {
+              el.removeAttr("disabled");
+              delayTime = defaultDelayTime;
+              el.val(delayTime);
+            }
+          },
+          intMax: function (ev) {
+            intMax = parseInt(ev.target.value);
+            generateGrid();
+            gridDirty = false;
+          },
+          fontSize: function (ev) {
+            setFontSize(ev.target.value);
+            generateGrid();
+            gridDirty = false;
+          },
+          random: async function (ev) {
+            generateGrid();
+            gridDirty = false;
+          },
+          play: async function (ev) {
+            main();
+          },
+          delayTime: function (ev) {
+            delayTime = ev.target.value;
+          },
+        };
+
+        $("#controls").bind("change", function (ev) {
+          changeMap[ev.target.id](ev);
+        });
+        $("#controls input[type='button']").bind("click", function (ev) {
+          changeMap[ev.target.id](ev);
+        });
+
+        async function main(ev) {
+          disableSensitiveControls();
+
+          loopIterations = 0;
+          if (gridDirty) {
+            generateGrid();
+          }
+          gridDirty = true;
+          let result;
+          await delay(1000);
+          let selectedRoutine = document.getElementById("routine").value;
+          switch (selectedRoutine) {
+            case "quick":
+              result = await quickSort(DATA, 0, DATA.length - 1);
+              break;
+            case "merge":
+              result = await mergesort(DATA, 0, DATA.length);
+              break;
+            case "bubble":
+              result = await bubbleSort(DATA);
+              break;
+            case "insertion":
+              result = await insertionSort(DATA);
+              break;
+            case "heap":
+              result = await heapSort(DATA);
+              break;
+            case "selection":
+              result = await selectionSort(DATA);
+              break;
+            case "shell":
+              result = await shellSort(DATA);
+              break;
+            case "comb":
+              result = await combSort(DATA);
+              break;
+          }
+          applyRange(0, DATA.length - 1, (el) => {
+            el.classList.add("done");
+          });
+          enableSensitiveControls();
+          console.log(result);
+        }
+
+        /* in-place, comparison-based sorting algorithms*/
+        async function combSort(arr) {
+          var iterations = 0;
+          var gap = arr.length - 2;
+          var decreaseFactor = 1.25;
+
+          while (!isSorted(arr)) {
+            loop();
+            if (iterations > 0)
+              gap = gap == 1 ? 1 : Math.floor(gap / decreaseFactor);
+
+            // Set front and back elements and increment to a gap
+            var front = 0;
+            var back = gap;
+            while (back <= arr.length - 1) {
+              loop();
+              if (arr[front] > arr[back]) {
+                if (mode == "synchronous") {
+                  applyMulti([front, back], (el) => {
+                    el.classList.add("swapping");
+                  });
+                  if (mode == "synchronous") await delay(delayTime);
+                }
+                swapValues(front, back);
+                [arr[front], arr[back]] = [arr[back], arr[front]];
+                if (mode == "synchronous") await delay(delayTime);
+                applyMulti([front, back], (el) => {
+                  el.classList.remove("swapping");
+                });
+              } else {
+                mark(front, "i");
+                mark(back, "j");
+                if (delayTime > 0) await delay(delayTime / 4);
+                unMark(front, "i");
+                unMark(back, "j");
+              }
+              front += 1;
+              back += 1;
+            }
+            await delay(delayTime);
+            iterations += 1;
+          }
+          return arr;
+
+          function isSorted(arr) {
+            var sorted = true;
+            for (var i = 0; i < arr.length - 1; i++) {
+              loop();
+              if (arr[i] > arr[i + 1]) {
+                sorted = false;
+                break;
+              }
+            }
+            return sorted;
+          }
+        }
+
+        async function shellSort(arr) {
+          var gaps = [701, 301, 132, 57, 23, 10, 4, 1];
+          /*https://en.wikipedia.org/wiki/Shellsort#Gap_sequences*/
+          gaps = gaps.filter((item) => item < arr.length);
+          for (var g = 0; g < gaps.length; g++) {
+            loop();
+            var h = gaps[g];
+            for (var i = h; i < arr.length; i++) {
+              loop();
+              var currentValue = arr[i];
+              let iTarget = getTarget(i);
+              iTarget.classList.add("i");
+
+              if (h == 1) mark(0, "done");
+              for (var j = i; j >= h; j -= h) {
+                if (currentValue >= arr[j - h]) {
+                  mark(j - h, "j");
+                  if (delayTime > 0) await delay(delayTime);
+                  unMark(j - h, "j");
+                  break;
+                }
+
+                loop();
+                applyMulti([j, j - h], (el) => {
+                  el.classList.add("swapping");
+                });
+                if (delayTime > 0) await delay(delayTime);
+                swapValues(j, j - h);
+
+                if (mode == "synchronous") await delay(delayTime);
+                applyMulti([j, j - h], (el) => {
+                  el.classList.remove("swapping");
+                });
+                if (h == 1) {
+                  mark(j, "done");
+                  mark(j - h, "done");
+                }
+                arr[j] = arr[j - h];
+              }
+              if (mode == "synchronous") await delay(delayTime);
+              iTarget.classList.remove("i");
+              if (h == 1) mark(j, "done");
+              arr[j] = currentValue;
+            }
+            await delay(delayTime);
+          }
+          return arr;
+        }
+
+        async function selectionSort(arr) {
+          for (var i = 0; i < arr.length; i++) {
+            loop();
+            var min = i;
+            for (var j = i + 1; j < arr.length; j++) {
+              loop();
+              if (mode == "synchronous") {
+                mark(j, "j");
+                await delay(delayTime / 2);
+                unMark(j, "j");
+              }
+
+              if (arr[j] < arr[min]) {
+                unMark(min, "min");
+                min = j;
+                mark(min, "min");
+              }
+            }
+            $(".min").removeClass("min");
+
+            if (i !== min) {
+              if (mode == "synchronous") {
+                applyMulti([i, min], (el) => {
+                  el.classList.add("swapping");
+                });
+                await delay(delayTime);
+              }
+              swapValues(i, min);
+              [arr[i], arr[min]] = [arr[min], arr[i]];
+              await delay(delayTime);
+              applyMulti([i, min], (el) => {
+                el.classList.remove("swapping");
+              });
+            }
+            mark(i, "done");
+          }
+          return arr;
+        }
+
+        async function heapSort(arr) {
+          loop();
+          var end = arr.length;
+
+          //build the heap, starting with the lowest nodes that have children (n/2 and less) and going up the tree:
+          for (var i = Math.floor(end / 2); i >= 0; i -= 1) {
+            await heapify(arr, i);
+          }
+
+          //now, continually pop the root (max value), insert it at end of array, then heapify by switching last element into root and bubbling it down:
+          for (i = end - 1; i > 0; i--) {
+            if (mode == "synchronous")
+              applyMulti([0, i], (el) => {
+                el.classList.add("swapping");
+              });
+            swapValues(0, i);
+            [arr[0], arr[i]] = [arr[i], arr[0]];
+            mark(i, "done");
+            await delay(delayTime);
+            applyMulti([0, i], (el) => {
+              el.classList.remove("swapping");
+            });
+
+            end--;
+            await heapify(arr, 0);
+          }
+
+          return arr;
+
+          async function heapify(arr, i) {
+            loop();
+            var left = 2 * i + 1;
+            var right = 2 * i + 2;
+            var max = i;
+
+            if (left < end && arr[left] > arr[max]) {
+              max = left;
+            }
+            if (right < end && arr[right] > arr[max]) {
+              max = right;
+            }
+
+            if (max != i) {
+              if (mode == "synchronous") {
+                applyMulti([i, max], (el) => {
+                  el.classList.add("swapping");
+                });
+                await delay(delayTime);
+              }
+
+              swapValues(i, max);
+              [arr[i], arr[max]] = [arr[max], arr[i]];
+
+              if (mode == "synchronous") {
+                await delay(delayTime);
+              }
+              applyMulti([i, max], (el) => {
+                el.classList.remove("swapping");
+              });
+              await heapify(arr, max);
+            }
+          }
+        }
+
+        async function insertionSort(arr) {
+          for (var i = 1, j; i < arr.length; i++) {
+            loop();
+            var temp = arr[i];
+
+            let iTarget = getTarget(i);
+            if (iTarget) iTarget.classList.add("i");
+            await delay(delayTime);
+            if (iTarget) iTarget.classList.remove("i");
+
+            for (var j = i - 1; j >= 0 && arr[j] > temp; j--) {
+              loop();
+
+              let jTarget = getTarget(j + 1);
+              jTarget.textContent = arr[j];
+              jTarget.style.backgroundColor = "rgba(240, 0, 0, .3)";
+              if (mode == "synchronous") superscript(j + 1, temp);
+
+              arr[j + 1] = arr[j];
+
+              if (mode == "synchronous") await delay(delayTime);
+              $(".superscript").remove();
+              jTarget.style.backgroundColor = "";
+            }
+            getTarget(j + 1).textContent = temp;
+            arr[j + 1] = temp;
+            await delay(delayTime);
+          }
+
+          return arr;
+        }
+
+        async function bubbleSort(arr) {
+          var didSwap = false;
+          var end = arr.length - 1;
+          do {
+            didSwap = false;
+            await delay(delayTime);
+            for (var i = 0; i < end; i++) {
+              loop();
+              if (arr[i] > arr[i + 1]) {
+                [arr[i], arr[i + 1]] = [arr[i + 1], arr[i]];
+                swapValues(i, i + 1);
+                superscript(i + 1, arr[i + 1]);
+                didSwap = true;
+                if (mode == "synchronous") await delay(delayTime);
+                $(".superscript").remove();
+              }
+            }
+            mark(end, "done");
+            end--; //last value is greatest, it bubbled through to the end.
+          } while (didSwap);
+          return arr;
+        }
+
+        async function quickSort(arr, start, end) {
+          if (end - start <= 0) return;
+          loop();
+
+          applyRange(start, end, (el) => {
+            el.classList.add("partitioned");
+          });
+          let i = start;
+          let j = end - 1;
+          let pivotVal = arr[end]; //use the last element as pivot
+          let pivotEl = getTarget(end);
+          pivotEl.classList.add("pivot");
+          await delay(delayTime);
+
+          /*partition step*/
+          while (i <= j) {
+            //the equals part handles the base case when the whole array is two elements, i will start out equal to j, but we still need to (possibly) increment the pivot spot (i)
+            loop();
+            mark(i, "i");
+            mark(j, "j");
+            while (arr[i] < pivotVal) {
+              loop();
+              $(".i").removeClass("i");
+              i++;
+              mark(i, "i");
+              if (delayTime > 0) await delay(delayTime / 3);
+            }
+            while (arr[j] > pivotVal) {
+              loop();
+              $(".j").removeClass("j");
+              j--;
+              mark(j, "j");
+              if (delayTime > 0) await delay(delayTime / 3);
+            }
+            if (i <= j) {
+              //go ahead and swap&increment even when i and j point to same element, so that we can then iterate i and j and break the loop (say the array was [2,2], i and j would not move via the "while" loops and would otherwise be stuck at i==j==0)
+
+              if (mode == "synchronous") {
+                mark(i, "swapping");
+                mark(j, "swapping");
+                await delay(delayTime);
+              }
+              [arr[i], arr[j]] = [arr[j], arr[i]];
+              swapValues(i, j);
+              unMark(i, "swapping");
+              unMark(j, "swapping");
+              i++;
+              j--;
+            }
+            $(".i, .j").removeClass("i").removeClass("j");
+          }
+          //now swap right side, the pivot value, into i
+          [arr[end], arr[i]] = [arr[i], arr[end]];
+          pivotEl.classList.remove("pivot");
+          swapValues(i, end);
+          await delay(delayTime);
+          /*end of partition step, proceed to recursive quicksorts*/
+
+          applyRange(start, end, (el) => {
+            el.classList.remove("partitioned");
+          });
+
+          if (mode == "asynchronous") {
+            await Promise.all([
+              quickSort(arr, start, i - 1),
+              quickSort(arr, i + 1, end),
+            ]);
+          } else {
+            await quickSort(arr, start, i - 1);
+            await quickSort(arr, i + 1, end);
+          }
+          return arr;
+        }
+
+        async function mergesort(arr, start, end) {
+          loop();
+          let lastIndex = end - 1;
+          applyRange(start, lastIndex, (el) => {
+            el.classList.add("partitioned");
+          });
+          await delay(delayTime);
+          applyRange(start, lastIndex, (el) => {
+            el.classList.remove("partitioned");
+          });
+
+          let half = Math.floor((end + start) / 2);
+
+          if (end - start == 3) {
+            await merge(arr, start + 1, end);
+            await merge(arr, start, end);
+          } else if (end - start == 2) {
+            await merge(arr, start, end);
+          } else {
+            if (mode == "synchronous") {
+              await mergesort(arr, half, end);
+              await mergesort(arr, start, half);
+            } else {
+              await Promise.all([
+                mergesort(arr, half, end),
+                mergesort(arr, start, half),
+              ]);
+            }
+            await merge(arr, start, end);
+          }
+          return arr;
+
+          async function merge(arr, start, end) {
+            await delay(delayTime);
+            let temp = [];
+            let mid = Math.floor((end + start) / 2);
+            let p = start;
+            let q = mid;
+            var pEmpty, qEmpty;
+
+            for (let i = start; i < end; i++) {
+              loop();
+
+              pEmpty = p >= mid;
+              qEmpty = q >= end;
+
+              //push lower sorted value, or if one queue is empty, take from the other queue
+              if (qEmpty || (!pEmpty && arr[p] <= arr[q])) {
+                let val = arr[p++];
+                temp.push(val);
+              } else if (!qEmpty) {
+                let val = arr[q++];
+                temp.push(val);
+              }
+            }
+
+            //console.log(`sorted subsection was ${temp}, now insert into real array`)
+            for (let i = 0; i < end - start; i++) {
+              loop();
+              arr[start + i] = temp[i];
+              let sortedTarget = getTarget(start + i);
+              if (sortedTarget) {
+                sortedTarget.textContent = temp[i];
+                sortedTarget.classList.add("done");
+                sortedTarget.classList.remove("right");
+                sortedTarget.classList.remove("left");
+              } else {
+                console.log("Error:target un    fined.");
+              }
+
+              if (delayTime > 0) await delay(delayTime / 3);
+            }
+            getTarget(start).classList.add("left");
+            getTarget(end - 1).classList.add("right");
+          }
+        }
+
+        /* HELPER FUNCTIONS */
+        function superscript(i, val) {
+          return $(`<span>${val}</span>`)
+            .addClass("superscript")
+            .css({
+              position: "absolute",
+              top: "-50%",
+              left: "50%",
+            })
+            .appendTo(getTarget(i));
+        }
+
+        function mark(index, className) {
+          let target = getTarget(index);
+          if (target) {
+            target.classList.add(className);
+          }
+          return target;
+        }
+
+        function unMark(index, className) {
+          let target = getTarget(index);
+          if (target) {
+            target.classList.remove(className);
+          }
+          return target;
+        }
+
+        function applyRange(start, end, func) {
+          while (start <= end) {
+            let t = getTarget(start++);
+            func(t);
+          }
+        }
+
+        function applyMulti(indexes, func) {
+          indexes.forEach((index) => {
+            func(getTarget(index));
+          });
+        }
+
+        function swapValues(i, j) {
+          let t1 = getTarget(i);
+          let t2 = getTarget(j);
+          if (t1 && t2) {
+            [t1.textContent, t2.textContent] = [t2.textContent, t1.textContent];
+          } else {
+            console.log("error:swapValues didn't find both elements");
+          }
+        }
+
+        function getTarget(i) {
+          return document.querySelector(`div[i='${i}']`);
+        }
+
+        function disableSensitiveControls() {
+          $("#random").addClass("disabled").attr("disabled", "true");
+          $("#play")
+            .addClass("disabled")
+            .attr("title", "Engage async mode to speed up sort")
+            .attr("disabled", "true");
+          $("#fontSize").attr("disabled", "true");
+          $("#intMax").attr("disabled", "true");
+          $("#routine").attr("disabled", "true");
+        }
+
+        function enableSensitiveControls() {
+          $("#random").removeClass("disabled").removeAttr("disabled");
+          $("#play")
+            .removeClass("disabled")
+            .attr("title", "Generate new numbers and sort")
+            .removeAttr("disabled");
+          $("#fontSize").removeAttr("disabled");
+          $("#intMax").removeAttr("disabled");
+          $("#routine").removeAttr("disabled");
+        }
+
+        function generateGrid() {
+          $(grid).empty();
+
+          EM = getEmSize(grid);
+          LineHeight = EM + EM * 0.2;
+          const maxChars = intMax.toString().length - 1;
+          const maxWidth = EM * maxChars;
+          const addedByBorder = 2;
+          let styledWidth = maxWidth + totalPadding + addedByBorder;
+          let styledHeight = LineHeight + totalPadding + addedByBorder;
+
+          ROWS = Math.floor(grid.clientHeight / styledHeight);
+          COLS = Math.floor(grid.clientWidth / styledWidth);
+          grid.style.gridTemplateColumns = `repeat(${COLS}, minmax(${styledWidth}px, auto)`;
+          grid.style.gridTemplateRows = `repeat(${ROWS}, minmax(${styledHeight}px, auto))`;
+          const TOTAL = ROWS * COLS;
+          document.getElementById("N").innerHTML = `${TOTAL}`;
+
+          let arr = [];
+          for (let i = 1; i <= TOTAL; i++) {
+            let n = Math.floor(Math.random() * intMax);
+            arr.push(n);
+          }
+
+          buildGrid(arr);
+          DATA = arr;
+        }
+
+        function buildGrid(data) {
+          let i = 0;
+          for (var row = 0; row < ROWS; row++) {
+            for (var col = 0; col < COLS; col++) {
+              drawText(i, data[i++]);
+            }
+          }
+        }
+
+        function drawText(i, code) {
+          const outer = document.createElement("div");
+          outer.setAttribute("i", i);
+          outer.textContent = code;
+          grid.appendChild(outer);
+        }
+
+        function delay(ms) {
+          return new Promise((done) =>
+            setTimeout(() => {
+              done();
+            }, ms)
+          );
+        }
+
+        function getEmSize(el) {
+          let styles = getComputedStyle(el, "");
+          return Number(styles.fontSize.match(/(\d+)px/)[1]);
+        }
+
+        function setFontSize(multiplier) {
+          grid.style.fontSize = rohit * multiplier + "px";
+        }
+
+        var loopIterations = 0;
+        var operationsLabel = document.getElementById("operations");
+
+        function loop() {
+          loopIterations++;
+          operationsLabel.textContent = loopIterations;
+        }
+      }
+      main();
+    </script>
+  </body>
+</html>

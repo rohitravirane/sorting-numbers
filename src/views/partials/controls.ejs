@@ -1,0 +1,86 @@
+<div id="controls">
+  <div>
+    <select id="routine" title="Sorting Algorithms">
+      <option selected value="quick">Quick Sort</option>
+      <option value="merge">Merge Sort</option>
+      <option value="heap">Heap Sort</option>
+      <option value="shell">Shell Sort</option>
+      <option value="comb">Comb Sort</option>
+      <option value="selection">Selection Sort</option>
+      <option value="bubble">Bubble Sort</option>
+      <option value="insertion">Insertion Sort</option>
+    </select>
+  </div>
+  <div>
+    <select id="mode" title="Mode">
+      <option selected value="synchronous">Synchronous</option>
+      <option value="asynchronous">Async/Fast</option>
+    </select>
+  </div>
+  <div>
+    <select id="delayTime" title="Delay(ms)">
+      <option>0</option>
+      <option>5</option>
+      <option selected>10</option>
+      <option>50</option>
+      <option>100</option>
+      <option>250</option>
+      <option>500</option>
+      <option>1000</option>
+      <option>2000</option>
+    </select>
+  </div>
+  <div>
+    <select id="fontSize" title="Font Size">
+      <option value="1" selected>1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+      <option value="6">6</option>
+      <option value="7">7</option>
+      <option value="8">8</option>
+      <option value="9">9</option>
+      <option value="10">10</option>
+    </select>
+  </div>
+  <div>
+    <select id="intMax" title="Range of Numbers">
+      <option value="10">10</option>
+      <option value="100">100</option>
+      <option value="1000" selected>1000</option>
+      <option value="10000">10,000</option>
+      <option value="100000">100,000</option>
+      <option value="1000000">1,000,000</option>
+    </select>
+  </div>
+  <div>
+    <input
+      type="button"
+      title="To generate random Numbers"
+      id="random"
+      value="Random"
+    />
+    <input
+      type="button"
+      title="To stop sorting"
+      id="stop"
+      value="Stop"
+      onclick="window.location.reload()"
+    />
+    <input
+      type="button"
+      title="Generate numbers and sort"
+      id="play"
+      value="Start"
+    />
+  </div>
+  <div id="totalNums">Total Numbers: <label id="N"></label></div>
+  <div id="operationsContainer">
+    <label
+      title="A rough estimate of the loop or recursion cost of the routine."
+      >Operations:
+    </label>
+    <label id="operations"></label>
+  </div>
+</div>
